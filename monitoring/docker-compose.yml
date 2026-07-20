@@ -1,0 +1,5 @@
+# Stack de supervision - TODO jour 9
+# services : prometheus, pushgateway, grafana
+# Les volumes montent prometheus/prometheus.yml et grafana/dashboards/
+version: "3.8"
+services: {}

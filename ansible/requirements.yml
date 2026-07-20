@@ -1,0 +1,4 @@
+# Collections Ansible utiles (installer avec : ansible-galaxy install -r requirements.yml)
+collections:
+  - name: ansible.posix
+  - name: community.general

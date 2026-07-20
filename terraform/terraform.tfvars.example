@@ -1,0 +1,3 @@
+# Copier en terraform.tfvars et adapter.
+ssh_public_key = "ssh-ed25519 AAAA... ton_email@exemple.fr"
+# base_image_path = "/var/lib/libvirt/images/debian-12-base.qcow2"

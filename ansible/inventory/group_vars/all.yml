@@ -1,0 +1,5 @@
+---
+# Variables globales
+ansible_user: debian
+ssh_port: 22
+# TODO jour 3+ : politique de durcissement partagée

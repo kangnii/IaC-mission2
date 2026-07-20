@@ -1,0 +1,22 @@
+---
+# Playbook principal : applique la configuration puis le durcissement.
+- name: Configuration de base + durcissement
+  hosts: all
+  become: true
+  roles:
+    - common
+    - ssh_hardening
+    - firewall
+    # - cis_hardening   # activé jour 5
+
+- name: Serveur web
+  hosts: web
+  become: true
+  roles:
+    - web              # implémenté jour 6
+
+- name: Base de données
+  hosts: db
+  become: true
+  roles:
+    - db               # implémenté jour 6

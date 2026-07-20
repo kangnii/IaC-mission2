@@ -1,0 +1,8 @@
+# Pipeline CI - TODO jour 11 (bonus)
+# stages : validate (terraform fmt/validate, ansible-lint)
+#          audit (lance l'outil de conformité)
+#          gate (échoue si score < seuil)
+stages:
+  - validate
+  - audit
+  - gate

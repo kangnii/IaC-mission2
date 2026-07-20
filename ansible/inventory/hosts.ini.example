@@ -1,0 +1,13 @@
+# Généré automatiquement par Terraform (jour 2).
+# Exemple de structure attendue :
+[bastion]
+bastion ansible_host=192.168.100.10
+
+[web]
+web ansible_host=192.168.100.20
+
+[db]
+db ansible_host=192.168.100.30
+
+[all:vars]
+# rebond SSH par le bastion pour web et db
