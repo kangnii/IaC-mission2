@@ -56,8 +56,8 @@ reproductible et redéployable sur une vraie infrastructure.
 ## Suivi d'avancement
 
 - [x] Jour 1 : environnement, dépôt, image cloud-init
-- [ ] Jour 2 : Terraform (réseau + 3 VM)
-- [ ] Jour 3 : Ansible de base (common, ssh, firewall)
+- [x] Jour 2 : Terraform (réseau + 3 VM)
+- [x] Jour 3 : Ansible de base (common, ssh, firewall)
 - [ ] Jour 4 : scan OpenSCAP de référence (avant durcissement)
 - [ ] Jour 5 : rôle cis_hardening
 - [ ] Jour 6 : rôles web + db, scan après durcissement

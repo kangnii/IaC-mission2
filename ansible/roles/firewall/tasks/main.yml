@@ -1,3 +1,24 @@
 ---
 # Rôle firewall
 # TODO : implémentation aux jours indiqués dans le planning.
+- name: Installer nftables
+  ansible.builtin.apt:
+    name: nftables
+    state: present
+
+- name: Déployer la configuration nftables
+  ansible.builtin.template:
+    src: nftables.conf.j2
+    dest: /etc/nftables.conf
+    owner: root
+    group: root
+    mode: "0640"
+    validate: 'nft -c -f %s'
+  notify: Recharger nftables
+
+- name: Activer et démarrer nftables
+  ansible.builtin.systemd:
+    name: nftables
+    state: started
+    enabled: true
+    daemon_reload: true

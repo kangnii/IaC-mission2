@@ -1,3 +1,37 @@
 ---
 # Rôle common
 # TODO : implémentation aux jours indiqués dans le planning.
+- name: Mettre à jour le cache apt
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Installer les paquets de base
+  ansible.builtin.apt:
+    name: "{{ common_packages }}"
+    state: present
+
+- name: Définir le fuseau horaire
+  community.general.timezone:
+    name: "{{ common_timezone }}"
+  notify: Redémarrer chrony
+
+- name: Activer et démarrer la synchronisation NTP
+  ansible.builtin.service:
+    name: chrony
+    state: started
+    enabled: true
+
+- name: Activer les mises à jour de sécurité automatiques
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Vérifier la cohérence du hostname avec l'inventaire
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname }}"

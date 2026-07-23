@@ -1,0 +1,14 @@
+{
+  "files.associations": {
+    "*.tf": "terraform",
+    "*.tfvars": "terraform",
+    "*.hcl": "terraform"
+  },
+  "terraform.path": "terraform",
+  "terraform.languageServer": {
+    "enabled": true
+  },
+  "[terraform]": {
+    "editor.defaultFormatter": "hashicorp.terraform"
+  }
+}

@@ -32,12 +32,15 @@ resource "libvirt_domain" "vm" {
 
   name   = each.key
   memory = each.value.memory
+  autostart = true
+  running = true
   vcpu   = each.value.vcpu
 
   cloudinit = libvirt_cloudinit_disk.init[each.key].id
 
   network_interface {
     network_id     = libvirt_network.private.id
+    addresses      = [each.value.ip]
     wait_for_lease = false
   }
 

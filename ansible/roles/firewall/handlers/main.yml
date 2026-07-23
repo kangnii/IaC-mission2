@@ -1,2 +1,6 @@
 ---
 # Handlers du rôle firewall
+- name: Recharger nftables
+  ansible.builtin.systemd:
+    name: nftables
+    state: restarted

@@ -1,0 +1,35 @@
+#!/usr/sbin/nft -f
+
+flush ruleset
+
+table inet filter {
+    chain input {
+        type filter hook input priority 0; policy drop;
+
+        iif "lo" accept
+        ct state established,related accept
+        ct state invalid drop
+        ip protocol icmp accept
+
+{% if 'role_bastion' in group_names %}
+        # Bastion : seul point d'entrée SSH de l'infra
+        tcp dport 22 accept
+{% elif 'role_web' in group_names %}
+        # Web : SSH uniquement depuis le bastion, HTTP/HTTPS ouverts
+        ip saddr {{ hostvars['bastion']['ansible_host'] }} tcp dport 22 accept
+        tcp dport { 80, 443 } accept
+{% elif 'role_db' in group_names %}
+        # DB : SSH uniquement depuis le bastion, Postgres uniquement depuis web
+        ip saddr {{ hostvars['bastion']['ansible_host'] }} tcp dport 22 accept
+        ip saddr {{ hostvars['web']['ansible_host'] }} tcp dport 5432 accept
+{% endif %}
+    }
+
+    chain forward {
+        type filter hook forward priority 0; policy drop;
+    }
+
+    chain output {
+        type filter hook output priority 0; policy accept;
+    }
+}

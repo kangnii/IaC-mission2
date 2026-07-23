@@ -9,14 +9,14 @@
     - firewall
     # - cis_hardening   # activé jour 5
 
-- name: Serveur web
-  hosts: web
-  become: true
-  roles:
-    - web              # implémenté jour 6
+# - name: Serveur web
+#   hosts: web
+#   become: true
+#   roles:
+#     - web              # implémenté jour 6
 
-- name: Base de données
-  hosts: db
-  become: true
-  roles:
-    - db               # implémenté jour 6
+# - name: Base de données
+#   hosts: db
+#   become: true
+#   roles:
+#     - db               # implémenté jour 6

@@ -1,2 +1,11 @@
 ---
 # Variables par défaut du rôle common
+common_timezone: Europe/Paris
+common_packages:
+  - vim
+  - htop
+  - curl
+  - git
+  - chrony
+  - unattended-upgrades
+

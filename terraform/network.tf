@@ -5,6 +5,7 @@ resource "libvirt_network" "private" {
   name = var.network_name
   mode = "nat"
   domain = "iac.local"
+  autostart = true
   addresses = [var.network_cidr]
 
     dhcp {

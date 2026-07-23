@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "hashicorp.terraform"
+  ],
+  "unwantedRecommendations": [
+    "opentofu.vscode-opentofu"
+  ]
+}

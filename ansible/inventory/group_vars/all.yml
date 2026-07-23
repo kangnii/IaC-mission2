@@ -3,3 +3,7 @@
 ansible_user: debian
 ssh_port: 22
 # TODO jour 3+ : politique de durcissement partagée
+ansible_ssh_common_args: >-
+  {% if inventory_hostname != 'bastion' %}
+  -o ProxyJump=debian@{{ hostvars['bastion']['ansible_host'] }}
+  {% endif %}
