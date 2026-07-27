@@ -1,0 +1,10 @@
+---
+# Playbook d'audit de conformité OpenSCAP — indépendant du provisioning/durcissement.
+# Usage :
+#   ansible-playbook audit.yml -e oscap_report_label=baseline   (Jour 4, avant durcissement)
+#   ansible-playbook audit.yml -e oscap_report_label=hardened   (Jour 6, après durcissement)
+- name: Audit de conformité OpenSCAP
+  hosts: all
+  become: true
+  roles:
+    - oscap_scan

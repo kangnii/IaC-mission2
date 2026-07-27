@@ -1,0 +1,60 @@
+---
+- name: Installer le scanner OpenSCAP (sans le contenu SSG du dépôt Debian, trop ancien)
+  ansible.builtin.apt:
+    name: openscap-scanner
+    state: present
+
+- name: Créer le répertoire de contenu SCAP sur la VM cible
+  ansible.builtin.file:
+    path: "{{ oscap_remote_content_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Déployer le datastream ComplianceAsCode vendoré (Debian 12)
+  ansible.builtin.copy:
+    src: "{{ oscap_content_filename }}"
+    dest: "{{ oscap_remote_content_dir }}/{{ oscap_content_filename }}"
+    mode: "0644"
+
+- name: Créer le répertoire de rapports sur la VM cible
+  ansible.builtin.file:
+    path: "{{ oscap_remote_report_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Lancer le scan OpenSCAP (profil {{ oscap_profile }})
+  ansible.builtin.command:
+    cmd: >
+      oscap xccdf eval
+      --profile {{ oscap_profile }}
+      --results {{ oscap_remote_report_dir }}/{{ inventory_hostname }}-{{ oscap_report_label }}-results.xml
+      --results-arf {{ oscap_remote_report_dir }}/{{ inventory_hostname }}-{{ oscap_report_label }}-arf.xml
+      --report {{ oscap_remote_report_dir }}/{{ inventory_hostname }}-{{ oscap_report_label }}-report.html
+      {{ oscap_remote_content_dir }}/{{ oscap_content_filename }}
+  register: oscap_result
+  changed_when: true
+  # rc=2 = au moins une règle a échoué : c'est le résultat NORMAL attendu au Jour 4.
+  # Seul rc > 2 est une vraie erreur d'exécution du scanner.
+  failed_when: oscap_result.rc > 2
+
+- name: Afficher le résumé du scan
+  ansible.builtin.debug:
+    msg: "{{ oscap_result.stdout_lines[-10:] }}"
+
+- name: Créer le répertoire local de rapports (poste de contrôle)
+  ansible.builtin.file:
+    path: "{{ oscap_local_report_dir }}"
+    state: directory
+    mode: "0755"
+  delegate_to: localhost
+  become: false
+
+- name: Rapatrier les rapports vers le poste de contrôle
+  ansible.builtin.fetch:
+    src: "{{ oscap_remote_report_dir }}/{{ item }}"
+    dest: "{{ oscap_local_report_dir }}/"
+    flat: true
+  loop:
+    - "{{ inventory_hostname }}-{{ oscap_report_label }}-results.xml"
+    - "{{ inventory_hostname }}-{{ oscap_report_label }}-arf.xml"
+    - "{{ inventory_hostname }}-{{ oscap_report_label }}-report.html"

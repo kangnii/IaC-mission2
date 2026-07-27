@@ -1,0 +1,11 @@
+---
+# Contenu ComplianceAsCode v0.1.81, natif Debian 12, vendoré dans roles/oscap_scan/files/
+# (le paquet Debian ssg-debian ne fournit que jusqu'à Debian 11, cf. docs/limitations.md)
+oscap_content_filename: ssg-debian12-ds.xml
+oscap_profile: xccdf_org.ssgproject.content_profile_anssi_bp28_high
+
+oscap_report_label: baseline
+
+oscap_remote_content_dir: /opt/oscap-content
+oscap_remote_report_dir: /tmp/oscap-reports
+oscap_local_report_dir: "{{ playbook_dir }}/../compliance/reports/{{ oscap_report_label }}"
