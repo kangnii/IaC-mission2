@@ -59,7 +59,7 @@ reproductible et redéployable sur une vraie infrastructure.
 - [x] Jour 2 : Terraform (réseau + 3 VM)
 - [x] Jour 3 : Ansible de base (common, ssh, firewall)
 - [x] Jour 4 : scan OpenSCAP de référence (avant durcissement)
-- [ ] Jour 5 : rôle cis_hardening
+- [x] Jour 5 : rôle cis_hardening
 - [ ] Jour 6 : rôles web + db, scan après durcissement
 - [ ] Jour 7 : marge / ébauche outil Python
 - [ ] Jour 8 : scanner.py + parser.py
