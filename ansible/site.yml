@@ -7,7 +7,7 @@
     - common
     - ssh_hardening
     - firewall
-    # - cis_hardening   # activé jour 5
+    - cis_hardening   
 
 # - name: Serveur web
 #   hosts: web

@@ -1,2 +1,121 @@
 ---
 # Variables par défaut du rôle cis_hardening
+# Cible : réduire les échecs identifiés au scan baseline (Jour 4, ANSSI-BP-028 high, score 44,6 %)
+
+# --- 1. Durcissement sysctl (réseau + noyau) ---
+cis_sysctl_settings:
+  net.ipv4.conf.all.accept_redirects: 0
+  net.ipv4.conf.default.accept_redirects: 0
+  net.ipv4.conf.all.secure_redirects: 0
+  net.ipv4.conf.default.secure_redirects: 0
+  net.ipv4.conf.all.send_redirects: 0
+  net.ipv4.conf.all.accept_source_route: 0
+  net.ipv4.conf.default.accept_source_route: 0
+  net.ipv4.conf.all.accept_local: 0
+  net.ipv4.conf.all.route_localnet: 0
+  net.ipv4.conf.all.shared_media: 0
+  net.ipv4.conf.default.shared_media: 0
+  net.ipv4.conf.all.rp_filter: 1
+  net.ipv4.conf.default.rp_filter: 1
+  net.ipv4.conf.all.arp_filter: 1
+  net.ipv4.conf.all.arp_ignore: 1
+  net.ipv4.conf.all.drop_gratuitous_arp: 1
+  net.ipv4.icmp_ignore_bogus_error_responses: 1
+  net.ipv4.ip_forward: 0
+  net.ipv4.ip_local_port_range: "32768 60999"
+  net.ipv4.tcp_syncookies: 1
+  net.ipv4.tcp_rfc1337: 1
+
+  net.ipv6.conf.all.accept_redirects: 0
+  net.ipv6.conf.default.accept_redirects: 0
+  net.ipv6.conf.all.accept_source_route: 0
+  net.ipv6.conf.default.accept_source_route: 0
+  net.ipv6.conf.all.accept_ra_defrtr: 0
+  net.ipv6.conf.default.accept_ra_defrtr: 0
+  net.ipv6.conf.all.accept_ra_pinfo: 0
+  net.ipv6.conf.default.accept_ra_pinfo: 0
+  net.ipv6.conf.all.accept_ra_rtr_pref: 0
+  net.ipv6.conf.default.accept_ra_rtr_pref: 0
+  net.ipv6.conf.all.autoconf: 0
+  net.ipv6.conf.default.autoconf: 0
+  net.ipv6.conf.all.max_addresses: 1
+  net.ipv6.conf.default.max_addresses: 1
+  net.ipv6.conf.all.router_solicitations: 0
+  net.ipv6.conf.default.router_solicitations: 0
+
+  net.core.bpf_jit_harden: 2
+  kernel.unprivileged_bpf_disabled: 1
+  kernel.dmesg_restrict: 1
+  kernel.kptr_restrict: 2
+  kernel.randomize_va_space: 2
+  kernel.sysrq: 0
+  kernel.yama.ptrace_scope: 1
+  kernel.perf_event_paranoid: 3
+  kernel.perf_cpu_time_max_percent: 1
+  kernel.perf_event_max_sample_rate: 1
+  kernel.panic_on_oops: 1
+  kernel.pid_max: 65536
+  kernel.modules_disabled: 0   # cf. docs/limitations.md — désactivé pour ne pas casser web/db (Jour 6)
+
+  fs.protected_fifos: 2
+  fs.suid_dumpable: 0
+  vm.mmap_min_addr: 65536
+
+# --- 2. Comptes / PAM / mots de passe ---
+cis_pwquality_installed: true
+cis_pwquality_minlen: 12
+cis_pwquality_dcredit: -1
+cis_pwquality_ucredit: -1
+cis_pwquality_lcredit: -1
+cis_pwquality_ocredit: -1
+cis_pwquality_retry: 3
+
+cis_password_hashing_algorithm: yescrypt
+cis_password_rounds: 100000
+cis_password_max_days_root: 365
+
+cis_faillock_deny: 5
+cis_faillock_deny_root: 5
+cis_faillock_fail_interval: 900
+cis_faillock_unlock_time: 900
+
+cis_accounts_tmout: 900
+cis_umask: "027"
+
+cis_file_permissions:
+  - { path: /etc/sudoers, mode: "0440" }
+  - { path: /etc/ssh/sshd_config, mode: "0600" }
+  - { path: /boot/grub/grub.cfg, mode: "0600" }
+
+# --- 3. Sudo (hors requiretty, cf. limitations) ---
+cis_sudo_dedicated_group: sudo
+cis_sudo_umask: "027"
+
+# --- 4. Relais mail SMTP (Gmail) pour notifications AIDE ---
+cis_mail_relay_packages:
+  - postfix
+  - mailutils
+  - libsasl2-modules
+cis_mail_relay_host: "[smtp.gmail.com]:587"
+cis_mail_myhostname: "{{ inventory_hostname }}.iac-soutenance.local"
+cis_gmail_smtp_user: "{{ vault_cis_gmail_smtp_user }}"
+cis_gmail_smtp_app_password: "{{ vault_cis_gmail_smtp_app_password }}"
+
+# --- 5. AIDE ---
+cis_aide_packages:
+  - aide
+  - aide-common
+cis_aide_cron_hour: 5
+cis_aide_cron_minute: 0
+cis_aide_mail_to: CHANGE_ME@gmail.com   
+# --- 6. Auditd ---
+cis_audit_packages:
+  - auditd
+  - audispd-plugins
+
+# --- 7. Rsyslog / logrotate ---
+cis_rsyslog_packages:
+  - rsyslog
+  - rsyslog-gnutls
+cis_logrotate_packages:
+  - logrotate

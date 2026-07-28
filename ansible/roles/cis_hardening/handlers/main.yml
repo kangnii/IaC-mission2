@@ -1,2 +1,17 @@
 ---
 # Handlers du rôle cis_hardening
+- name: Régénérer la table sasl_passwd (postmap)
+  ansible.builtin.command: postmap /etc/postfix/sasl_passwd
+  listen: Régénérer la table sasl_passwd (postmap)
+
+- name: Redémarrer postfix
+  ansible.builtin.systemd:
+    name: postfix
+    state: restarted
+    daemon_reload: true
+
+- name: Redémarrer rsyslog
+  ansible.builtin.systemd:
+    name: rsyslog
+    state: restarted
+    daemon_reload: true

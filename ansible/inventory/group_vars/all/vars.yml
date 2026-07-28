@@ -3,6 +3,7 @@
 ansible_user: debian
 ssh_port: 22
 ansible_ssh_private_key_file: ~/.ssh/iac_soutenance
+cis_aide_mail_to: wisdomfollygan@gmail.com
 # TODO jour 3+ : politique de durcissement partagée
 ansible_ssh_common_args: >-
   -o IdentitiesOnly=yes

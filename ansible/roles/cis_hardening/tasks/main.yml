@@ -1,3 +1,267 @@
 ---
-# Rôle cis_hardening
-# TODO : implémentation aux jours indiqués dans le planning.
+# Rôle cis_hardening — durcissement CIS/ANSSI-BP-028 (Jour 5)
+# Réduit les échecs identifiés au scan baseline OpenSCAP (Jour 4, score 44,6 %)
+
+# --- 1. Sysctl (réseau + noyau) ---
+- name: Appliquer les paramètres sysctl de durcissement (CIS/ANSSI)
+  ansible.posix.sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    sysctl_set: true
+    state: present
+    reload: true
+  loop: "{{ cis_sysctl_settings | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+
+# --- 2. Comptes / PAM / mots de passe ---
+- name: Installer libpam-pwquality
+  ansible.builtin.apt:
+    name: libpam-pwquality
+    state: present
+  when: cis_pwquality_installed
+
+- name: Configurer la complexité des mots de passe (pwquality.conf)
+  ansible.builtin.lineinfile:
+    path: /etc/security/pwquality.conf
+    regexp: "^#?{{ item.key }}"
+    line: "{{ item.key }} = {{ item.value }}"
+    create: true
+    mode: "0644"
+  loop:
+    - { key: minlen, value: "{{ cis_pwquality_minlen }}" }
+    - { key: dcredit, value: "{{ cis_pwquality_dcredit }}" }
+    - { key: ucredit, value: "{{ cis_pwquality_ucredit }}" }
+    - { key: lcredit, value: "{{ cis_pwquality_lcredit }}" }
+    - { key: ocredit, value: "{{ cis_pwquality_ocredit }}" }
+    - { key: retry, value: "{{ cis_pwquality_retry }}" }
+  loop_control:
+    label: "{{ item.key }}"
+
+- name: Configurer le verrouillage de compte après échecs (faillock.conf)
+  ansible.builtin.lineinfile:
+    path: /etc/security/faillock.conf
+    regexp: "^#?{{ item.key }}"
+    line: "{{ item.key }} = {{ item.value }}"
+    create: true
+    mode: "0644"
+  loop:
+    - { key: deny, value: "{{ cis_faillock_deny }}" }
+    - { key: fail_interval, value: "{{ cis_faillock_fail_interval }}" }
+    - { key: unlock_time, value: "{{ cis_faillock_unlock_time }}" }
+  loop_control:
+    label: "{{ item.key }}"
+
+- name: Activer pam_faillock dans la pile PAM (auth)
+  ansible.builtin.blockinfile:
+    path: /etc/pam.d/common-auth
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - cis_hardening faillock"
+    insertafter: "^# here's the fallback"
+    block: |
+      auth    required                        pam_faillock.so preauth
+      auth    [success=1 default=ignore]      pam_unix.so nullok
+      auth    [default=die]                   pam_faillock.so authfail
+      auth    sufficient                      pam_faillock.so authsucc
+
+- name: Activer pam_faillock dans la pile PAM (account)
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-account
+    line: "account     required                        pam_faillock.so"
+    insertbefore: BOF
+
+- name: Verrouiller aussi le compte root après échecs
+  ansible.builtin.lineinfile:
+    path: /etc/security/faillock.conf
+    regexp: "^#?even_deny_root"
+    line: "even_deny_root"
+    create: true
+    mode: "0644"
+
+- name: Forcer le nombre de rounds yescrypt pour pam_unix
+  ansible.builtin.lineinfile:
+    path: /etc/pam.d/common-password
+    regexp: '^(password\s+\[success=1 default=ignore\]\s+pam_unix\.so.*obscure)(?! rounds=)'
+    line: 'password        [success=1 default=ignore]      pam_unix.so obscure use_authtok try_first_pass yescrypt rounds={{ cis_password_rounds }}'
+    backrefs: true
+
+- name: Rendre explicite l'algorithme de hash des mots de passe (login.defs)
+  ansible.builtin.lineinfile:
+    path: /etc/login.defs
+    regexp: "^#?ENCRYPT_METHOD"
+    line: "ENCRYPT_METHOD {{ cis_password_hashing_algorithm | upper }}"
+
+- name: Définir la durée de vie maximale du mot de passe root
+  ansible.builtin.user:
+    name: root
+    password_expire_max: "{{ cis_password_max_days_root }}"
+
+- name: Définir un umask restrictif (login.defs, profile, bash.bashrc)
+  ansible.builtin.lineinfile:
+    path: "{{ item }}"
+    regexp: "^UMASK"
+    line: "UMASK {{ cis_umask }}"
+  loop:
+    - /etc/login.defs
+    - /etc/profile
+    - /etc/bash.bashrc
+
+- name: Configurer la déconnexion automatique des shells inactifs (TMOUT)
+  ansible.builtin.copy:
+    dest: /etc/profile.d/99-tmout.sh
+    content: |
+      # Déconnexion automatique après {{ cis_accounts_tmout }} secondes d'inactivité (CIS)
+      readonly TMOUT={{ cis_accounts_tmout }}
+      export TMOUT
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Interdire toute connexion directe en root sur console
+  ansible.builtin.copy:
+    dest: /etc/securetty
+    content: ""
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Appliquer les permissions strictes sur les fichiers sensibles
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    mode: "{{ item.mode }}"
+  loop: "{{ cis_file_permissions }}"
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: Restreindre les permissions du répertoire personnel de l'utilisateur ansible
+  ansible.builtin.file:
+    path: "/home/{{ ansible_user }}"
+    mode: "0750"
+
+# --- 3. Sudo (hors requiretty, cf. docs/limitations.md) ---
+- name: S'assurer que le groupe sudo dédié existe
+  ansible.builtin.group:
+    name: "{{ cis_sudo_dedicated_group }}"
+    state: present
+
+- name: Déployer les Defaults de durcissement sudo (fichier dédié)
+  ansible.builtin.copy:
+    dest: /etc/sudoers.d/99-cis-hardening
+    content: |
+      # Durcissement sudo — CIS/ANSSI (rôle cis_hardening, Jour 5)
+      # requiretty et noexec volontairement absents (cf. docs/limitations.md)
+      Defaults        umask={{ cis_sudo_umask }}
+      Defaults        umask_override
+      Defaults        ignore_dot
+      Defaults        use_pty
+    owner: root
+    group: root
+    mode: "0440"
+    validate: 'visudo -cf %s'
+
+# --- 4. Relais mail SMTP (Gmail) pour notifications AIDE ---
+- name: Installer postfix et les dépendances SASL
+  ansible.builtin.apt:
+    name: "{{ cis_mail_relay_packages }}"
+    state: present
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+
+- name: Configurer postfix en mode satellite
+  ansible.builtin.debconf:
+    name: postfix
+    question: "{{ item.q }}"
+    value: "{{ item.v }}"
+    vtype: string
+  loop:
+    - { q: postfix/main_mailer_type, v: "Satellite system" }
+    - { q: postfix/mailname, v: "{{ cis_mail_myhostname }}" }
+    - { q: postfix/destinations, v: "" }
+
+- name: Déployer main.cf (relais sortant Gmail, TLS obligatoire)
+  ansible.builtin.blockinfile:
+    path: /etc/postfix/main.cf
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - cis_hardening gmail relay"
+    block: |
+      relayhost = {{ cis_mail_relay_host }}
+      smtp_sasl_auth_enable = yes
+      smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd
+      smtp_sasl_security_options = noanonymous
+      smtp_tls_security_level = encrypt
+      smtp_tls_CAfile = /etc/ssl/certs/ca-certificates.crt
+  notify: Redémarrer postfix
+
+- name: Déployer les identifiants SASL (jamais dans Git en clair)
+  ansible.builtin.copy:
+    dest: /etc/postfix/sasl_passwd
+    content: "{{ cis_mail_relay_host }} {{ cis_gmail_smtp_user }}:{{ cis_gmail_smtp_app_password }}\n"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: Régénérer la table sasl_passwd (postmap)
+
+# --- 5. AIDE ---
+- name: Installer AIDE
+  ansible.builtin.apt:
+    name: "{{ cis_aide_packages }}"
+    state: present
+
+- name: Activer la vérification des ACL et attributs étendus dans aide.conf
+  ansible.builtin.blockinfile:
+    path: /etc/aide/aide.conf
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - cis_hardening aide acl/xattr"
+    block: |
+      ACLCheck = p+i+n+u+g+acl
+      XattrCheck = p+i+n+u+g+xattrs
+    insertafter: EOF
+
+- name: Initialiser la base AIDE (peut prendre plusieurs minutes)
+  ansible.builtin.command:
+    cmd: aideinit --yes --force
+  args:
+    creates: /var/lib/aide/aide.db.new
+  register: aide_init
+  changed_when: "'is complete' in aide_init.stdout or aide_init.rc == 0"
+
+- name: Activer la base AIDE nouvellement générée
+  ansible.builtin.copy:
+    remote_src: true
+    src: /var/lib/aide/aide.db.new
+    dest: /var/lib/aide/aide.db
+    mode: "0600"
+  when: aide_init is changed
+
+- name: Déployer le cron de vérification périodique AIDE
+  ansible.builtin.cron:
+    name: "Vérification d'intégrité AIDE (CIS)"
+    minute: "{{ cis_aide_cron_minute }}"
+    hour: "{{ cis_aide_cron_hour }}"
+    user: root
+    job: >-
+      /usr/bin/aide --check | /usr/bin/mail -s "Rapport AIDE $(hostname)" {{ cis_aide_mail_to }}
+    cron_file: cis-aide-check
+
+# --- 6. Auditd ---
+- name: Installer auditd
+  ansible.builtin.apt:
+    name: "{{ cis_audit_packages }}"
+    state: present
+
+- name: Activer et démarrer auditd
+  ansible.builtin.service:
+    name: auditd
+    state: started
+    enabled: true
+
+# --- 7. Rsyslog / logrotate ---
+- name: Installer rsyslog (TLS) et logrotate
+  ansible.builtin.apt:
+    name: "{{ cis_rsyslog_packages + cis_logrotate_packages }}"
+    state: present
+
+- name: Activer et démarrer rsyslog
+  ansible.builtin.service:
+    name: rsyslog
+    state: started
+    enabled: true
+  notify: Redémarrer rsyslog
