@@ -30,3 +30,6 @@ vault-password.txt
 
 # OS
 .DS_Store
+
+#Vault
+ansible/inventory/group_vars/vault.yml

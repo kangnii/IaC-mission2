@@ -1,3 +1,85 @@
 ---
-# Rôle web
-# TODO : implémentation aux jours indiqués dans le planning.
+# Rôle web — Nginx + TLS auto-signé + PHP-FPM (Jour 6)
+# Lien avec le Jour 5 : cis_hardening et le firewall (80/443 ouverts) sont
+# déjà appliqués à ce host via site.yml. On ajoute ici la couche applicative.
+
+- name: Installer Nginx et PHP-FPM
+  ansible.builtin.apt:
+    name: "{{ web_packages }}"
+    state: present
+    update_cache: true
+
+- name: Créer le répertoire pour le certificat TLS
+  ansible.builtin.file:
+    path: "{{ web_tls_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Générer un certificat TLS auto-signé (idempotent)
+  ansible.builtin.command:
+    cmd: >
+      openssl req -x509 -nodes
+      -newkey rsa:2048
+      -keyout {{ web_tls_key }}
+      -out {{ web_tls_cert }}
+      -days {{ web_tls_days_valid }}
+      -subj "/CN={{ web_tls_cn }}"
+  args:
+    creates: "{{ web_tls_cert }}"
+
+- name: Restreindre les permissions de la clé privée TLS
+  ansible.builtin.file:
+    path: "{{ web_tls_key }}"
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Créer le répertoire racine du site
+  ansible.builtin.file:
+    path: "{{ web_document_root }}"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0755"
+
+- name: Déployer la page de démonstration (interroge la base db)
+  ansible.builtin.template:
+    src: index.php.j2
+    dest: "{{ web_document_root }}/index.php"
+    owner: www-data
+    group: www-data
+    mode: "0640"
+  no_log: true   # le fichier contient le mot de passe applicatif (db_app_password)
+
+- name: Déployer le vhost Nginx TLS
+  ansible.builtin.template:
+    src: demo-tls.conf.j2
+    dest: /etc/nginx/sites-available/demo-tls.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Recharger nginx
+
+- name: Activer le vhost (lien symbolique sites-enabled)
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/demo-tls.conf
+    dest: /etc/nginx/sites-enabled/demo-tls.conf
+    state: link
+  notify: Recharger nginx
+
+- name: Désactiver le vhost par défaut de Nginx
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Recharger nginx
+
+- name: Démarrer et activer Nginx et PHP-FPM
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: started
+    enabled: true
+  loop:
+    - nginx
+    - "php{{ web_php_version }}-fpm"

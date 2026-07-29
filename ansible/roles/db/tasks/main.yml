@@ -1,3 +1,93 @@
 ---
-# Rôle db
-# TODO : implémentation aux jours indiqués dans le planning.
+# Rôle db — PostgreSQL restreint au réseau privé (Jour 6)
+# Lien avec le Jour 5 : le rôle cis_hardening (durcissement système) et le
+# rôle firewall (nftables, 5432 ouvert uniquement depuis l'IP de web) sont
+# déjà appliqués à ce host via site.yml. Ici on ajoute la défense en
+# profondeur au niveau applicatif (listen_addresses + pg_hba.conf).
+
+- name: Installer PostgreSQL et les dépendances
+  ansible.builtin.apt:
+    name: "{{ db_packages }}"
+    state: present
+    update_cache: true
+
+- name: Démarrer et activer PostgreSQL
+  ansible.builtin.service:
+    name: postgresql
+    state: started
+    enabled: true
+
+# --- Configuration réseau ---
+
+- name: Restreindre listen_addresses (localhost + IP privée uniquement)
+  ansible.builtin.lineinfile:
+    path: "{{ db_config_dir }}/postgresql.conf"
+    regexp: "^#?listen_addresses"
+    line: "listen_addresses = '{{ db_listen_addresses }}'"
+  notify: Redémarrer postgresql
+
+- name: Autoriser app_web depuis l'IP de web uniquement (pg_hba.conf)
+  ansible.builtin.blockinfile:
+    path: "{{ db_config_dir }}/pg_hba.conf"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK - db role (jour 6)"
+    block: |
+      host    {{ db_app_db_name }}    {{ db_app_user }}    {{ db_allowed_source_ip }}/32    scram-sha-256
+    insertafter: EOF
+  notify: Redémarrer postgresql
+
+- name: Appliquer immédiatement les changements de configuration
+  ansible.builtin.meta: flush_handlers
+
+# --- Base, rôle applicatif, table de démo ---
+
+- name: Créer la base applicative
+  community.postgresql.postgresql_db:
+    name: "{{ db_app_db_name }}"
+  become_user: postgres
+
+- name: Créer le rôle applicatif (non superuser, droits limités)
+  community.postgresql.postgresql_user:
+    db: "{{ db_app_db_name }}"
+    name: "{{ db_app_user }}"
+    password: "{{ db_app_password }}"
+    role_attr_flags: NOSUPERUSER,NOCREATEDB,NOCREATEROLE
+    encrypted: true
+  become_user: postgres
+  no_log: true
+
+- name: Donner les privilèges CRUD à app_web sur sa propre base
+  community.postgresql.postgresql_privs:
+    db: "{{ db_app_db_name }}"
+    role: "{{ db_app_user }}"
+    type: database
+    privs: CONNECT
+  become_user: postgres
+
+- name: Créer la table de démonstration (preuve bout-en-bout, jour 6)
+  community.postgresql.postgresql_query:
+    db: "{{ db_app_db_name }}"
+    query: >-
+      CREATE TABLE IF NOT EXISTS {{ db_health_check_table }} (
+        id SERIAL PRIMARY KEY,
+        checked_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        source TEXT NOT NULL
+      )
+  become_user: postgres
+
+- name: Donner les droits sur la table et la séquence à app_web
+  community.postgresql.postgresql_privs:
+    db: "{{ db_app_db_name }}"
+    role: "{{ db_app_user }}"
+    type: table
+    objs: "{{ db_health_check_table }}"
+    privs: SELECT,INSERT
+  become_user: postgres
+
+- name: Donner les droits sur la séquence associée à app_web
+  community.postgresql.postgresql_privs:
+    db: "{{ db_app_db_name }}"
+    role: "{{ db_app_user }}"
+    type: sequence
+    objs: "{{ db_health_check_table }}_id_seq"
+    privs: USAGE,SELECT
+  become_user: postgres

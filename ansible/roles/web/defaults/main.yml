@@ -1,2 +1,26 @@
 ---
-# Variables par défaut du rôle web
+# Variables par défaut du rôle web (Nginx + TLS + PHP-FPM) — Jour 6
+
+web_php_version: "8.2"   # version par défaut sur Debian 12 (bookworm)
+
+web_packages:
+  - nginx
+  - "php{{ web_php_version }}-fpm"
+  - "php{{ web_php_version }}-pgsql"
+
+web_php_fpm_socket: "/run/php/php{{ web_php_version }}-fpm.sock"
+
+web_document_root: /var/www/demo
+
+# Pas de vrai nom de domaine (démo locale) : on utilise l'IP privée comme CN
+# et comme server_name, cf. décision "TLS simple" du Jour 6.
+web_tls_cn: "{{ ansible_host }}"
+web_tls_dir: /etc/nginx/ssl
+web_tls_cert: "{{ web_tls_dir }}/demo.crt"
+web_tls_key: "{{ web_tls_dir }}/demo.key"
+web_tls_days_valid: 825   # cohérent avec la limite des navigateurs modernes
+
+# Connexion à la base (host = IP privée de db, cf. group_vars/all/vars.yml
+# pour db_app_db_name / db_app_user / db_app_password / db_health_check_table)
+web_db_host: "{{ hostvars['db']['ansible_host'] }}"
+web_db_port: 5432

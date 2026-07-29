@@ -1,2 +1,22 @@
 ---
-# Variables par défaut du rôle db
+# Variables par défaut du rôle db (PostgreSQL) — Jour 6
+
+db_postgresql_version: "15"   # version par défaut sur Debian 12 (bookworm)
+
+db_packages:
+  - postgresql
+  - postgresql-contrib
+  - python3-psycopg2   # requis par les modules community.postgresql sur la cible
+
+db_config_dir: "/etc/postgresql/{{ db_postgresql_version }}/main"
+
+# Écoute limitée à loopback + IP privée de la VM (pas 0.0.0.0) : défense en
+# profondeur en plus du firewall nftables (rôle firewall, Jour 3) qui bloque
+# déjà 5432 sauf depuis l'IP de web.
+db_listen_addresses: "localhost,{{ ansible_host }}"
+
+# db_app_db_name, db_app_user, db_app_password et db_health_check_table sont
+# centralisés dans group_vars/all/vars.yml (partagés avec le rôle web).
+
+# Hôte autorisé à se connecter en tant qu'app_web (uniquement web, cf. pg_hba.conf)
+db_allowed_source_ip: "{{ hostvars['web']['ansible_host'] }}"

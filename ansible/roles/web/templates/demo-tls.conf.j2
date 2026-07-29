@@ -1,0 +1,33 @@
+# Généré par Ansible (rôle web, Jour 6) — ne pas éditer à la main.
+server {
+    listen 80;
+    server_name {{ web_tls_cn }};
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name {{ web_tls_cn }};
+
+    ssl_certificate     {{ web_tls_cert }};
+    ssl_certificate_key {{ web_tls_key }};
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+
+    root {{ web_document_root }};
+    index index.php;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:{{ web_php_fpm_socket }};
+    }
+
+    location ~ /\. {
+        deny all;
+    }
+}

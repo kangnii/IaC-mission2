@@ -7,7 +7,7 @@ Décrire une infrastructure en code (Terraform), la durcir automatiquement
 (Ansible selon les benchmarks CIS), puis mesurer et superviser en continu son
 niveau de conformité (audit OpenSCAP + outil Python + Prometheus/Grafana).
 
-Message clé : le score de conformité passe de ~40 % à ~90 % en direct, de façon
+Message clé : le score de conformité passe de ~40 % à ~75 % en direct, de façon
 reproductible et redéployable sur une vraie infrastructure.
 
 ## Architecture
@@ -60,7 +60,7 @@ reproductible et redéployable sur une vraie infrastructure.
 - [x] Jour 3 : Ansible de base (common, ssh, firewall)
 - [x] Jour 4 : scan OpenSCAP de référence (avant durcissement)
 - [x] Jour 5 : rôle cis_hardening
-- [ ] Jour 6 : rôles web + db, scan après durcissement
+- [x] Jour 6 : rôles web + db, scan après durcissement
 - [ ] Jour 7 : marge / ébauche outil Python
 - [ ] Jour 8 : scanner.py + parser.py
 - [ ] Jour 9 : stack de supervision

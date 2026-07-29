@@ -5,6 +5,14 @@ ssh_port: 22
 ansible_ssh_private_key_file: ~/.ssh/iac_soutenance
 cis_aide_mail_to: wisdomfollygan@gmail.com
 # TODO jour 3+ : politique de durcissement partagée
+
+# --- Jour 6 : variables partagées entre les rôles db et web ---
+# Centralisées ici (plutôt que dupliquées dans les defaults de chaque rôle)
+# pour garantir que web et db s'accordent toujours sur les mêmes noms.
+db_app_db_name: demo_app
+db_app_user: app_web
+db_health_check_table: health_check
+db_app_password: "{{ vault_db_app_password }}"
 ansible_ssh_common_args: >-
   -o IdentitiesOnly=yes
   {% if inventory_hostname != 'bastion' %}

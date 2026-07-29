@@ -1,0 +1,41 @@
+<?php
+// Généré par Ansible (rôle web, Jour 6) — preuve bout-en-bout web -> db.
+// Les identifiants viennent du vault Ansible, jamais en clair dans le dépôt Git.
+
+$dbHost  = "{{ web_db_host }}";
+$dbPort  = "{{ web_db_port }}";
+$dbName  = "{{ db_app_db_name }}";
+$dbUser  = "{{ db_app_user }}";
+$dbPass  = "{{ db_app_password }}";
+$table   = "{{ db_health_check_table }}";
+
+echo "<!DOCTYPE html><html lang=\"fr\"><head><meta charset=\"utf-8\">";
+echo "<title>Démo Jour 6 - IaC-mission2</title></head><body>";
+echo "<h1>Preuve bout-en-bout : web (Nginx+TLS) -> db (PostgreSQL)</h1>";
+echo "<p>Servi en HTTPS depuis <strong>" . htmlspecialchars(gethostname()) . "</strong></p>";
+
+try {
+    $dsn = "pgsql:host=$dbHost;port=$dbPort;dbname=$dbName";
+    $pdo = new PDO($dsn, $dbUser, $dbPass, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    ]);
+
+    $insert = $pdo->prepare("INSERT INTO $table (source) VALUES (:source)");
+    $insert->execute(['source' => gethostname()]);
+
+    $rows = $pdo->query("SELECT id, checked_at, source FROM $table ORDER BY id DESC LIMIT 5");
+
+    echo "<p style=\"color:green;\">Connexion PostgreSQL réussie.</p>";
+    echo "<table border=\"1\" cellpadding=\"6\"><tr><th>id</th><th>checked_at</th><th>source</th></tr>";
+    foreach ($rows as $row) {
+        echo "<tr><td>" . htmlspecialchars($row['id']) . "</td>";
+        echo "<td>" . htmlspecialchars($row['checked_at']) . "</td>";
+        echo "<td>" . htmlspecialchars($row['source']) . "</td></tr>";
+    }
+    echo "</table>";
+} catch (PDOException $e) {
+    http_response_code(500);
+    echo "<p style=\"color:red;\">Échec de connexion à la base : " . htmlspecialchars($e->getMessage()) . "</p>";
+}
+
+echo "</body></html>";

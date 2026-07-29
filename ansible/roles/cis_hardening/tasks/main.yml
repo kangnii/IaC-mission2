@@ -95,13 +95,27 @@
     name: root
     password_expire_max: "{{ cis_password_max_days_root }}"
 
-- name: Définir un umask restrictif (login.defs, profile, bash.bashrc)
+- name: Définir un umask restrictif dans login.defs (directive UMASK)
+  ansible.builtin.lineinfile:
+    path: /etc/login.defs
+    regexp: "^#?UMASK"
+    line: "UMASK {{ cis_umask }}"
+
+- name: Nettoyer l'ancienne ligne UMASK erronée (majuscules) dans les scripts shell
   ansible.builtin.lineinfile:
     path: "{{ item }}"
     regexp: "^UMASK"
-    line: "UMASK {{ cis_umask }}"
+    state: absent
   loop:
-    - /etc/login.defs
+    - /etc/profile
+    - /etc/bash.bashrc
+
+- name: Définir un umask restrictif dans les scripts shell (commande umask)
+  ansible.builtin.lineinfile:
+    path: "{{ item }}"
+    regexp: "^#?umask"
+    line: "umask {{ cis_umask }}"
+  loop:
     - /etc/profile
     - /etc/bash.bashrc
 

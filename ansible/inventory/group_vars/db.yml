@@ -1,2 +1,5 @@
 ---
-# TODO jour 6 : version PostgreSQL, utilisateurs, réseaux autorisés
+# Jour 6 : la version PostgreSQL, le nom de la base, l'utilisateur applicatif
+# et l'IP autorisée sont définis dans ansible/roles/db/defaults/main.yml.
+# Ce fichier reste disponible pour surcharger ces valeurs par environnement
+# si besoin (ex. plusieurs bases de démo, version PostgreSQL différente).

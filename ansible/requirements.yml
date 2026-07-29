@@ -2,3 +2,4 @@
 collections:
   - name: ansible.posix
   - name: community.general
+  - name: community.postgresql   # jour 6 : rôle db (création base/utilisateur/table)
