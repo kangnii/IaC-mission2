@@ -61,7 +61,7 @@ reproductible et redéployable sur une vraie infrastructure.
 - [x] Jour 4 : scan OpenSCAP de référence (avant durcissement)
 - [x] Jour 5 : rôle cis_hardening
 - [x] Jour 6 : rôles web + db, scan après durcissement
-- [ ] Jour 7 : marge / ébauche outil Python
+- [x] Jour 7 : marge / ébauche outil Python
 - [ ] Jour 8 : scanner.py + parser.py
 - [ ] Jour 9 : stack de supervision
 - [ ] Jour 10 : dashboard Grafana

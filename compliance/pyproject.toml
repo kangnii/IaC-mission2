@@ -14,5 +14,8 @@ dependencies = [
 [project.scripts]
 audit = "audit.cli:main"
 
+[tool.setuptools.packages.find]
+include = ["audit", "audit.*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
