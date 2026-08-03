@@ -4,10 +4,11 @@
   hosts: all
   become: true
   roles:
-    - common
-    - ssh_hardening
-    - firewall
-    - cis_hardening
+    - { role: common, tags: [common] }
+    - { role: ssh_hardening, tags: [ssh_hardening] }
+    - { role: firewall, tags: [firewall] }
+    - { role: cis_hardening, tags: [cis_hardening] }
+    - { role: monitoring, tags: [monitoring] }   # implémenté jour 9 : node_exporter       
 
 - name: Serveur web
   hosts: web

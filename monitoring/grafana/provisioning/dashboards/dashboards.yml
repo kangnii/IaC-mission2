@@ -1,0 +1,19 @@
+# Provisioning Grafana — Jour 9
+# Charge automatiquement tout dashboard JSON déposé dans
+# monitoring/grafana/dashboards/ (monté en lecture seule dans le
+# conteneur, cf. docker-compose.yml). Le dashboard lui-même
+# (grafana/dashboards/compliance.json) est encore un placeholder
+# TODO jour 10 : ce provider le rechargera automatiquement une fois
+# le vrai contenu écrit, sans redémarrer Grafana.
+apiVersion: 1
+
+providers:
+  - name: compliance
+    orgId: 1
+    folder: ""
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: false
+    options:
+      path: /var/lib/grafana/dashboards

@@ -1,2 +1,11 @@
 ---
-# Variables par défaut du rôle monitoring
+# Variables par défaut du rôle monitoring — Jour 9
+
+monitoring_node_exporter_package: prometheus-node-exporter
+monitoring_node_exporter_port: 9100
+
+# Défense en profondeur (même logique que db_listen_addresses, jour 6) :
+# node_exporter n'écoute que sur l'IP privée de la VM, jamais sur 0.0.0.0,
+# en plus du filtrage nftables (rôle firewall) qui restreint déjà l'accès
+# au port 9100 à l'IP de la passerelle libvirt.
+monitoring_node_exporter_listen_address: "{{ ansible_host }}:{{ monitoring_node_exporter_port }}"

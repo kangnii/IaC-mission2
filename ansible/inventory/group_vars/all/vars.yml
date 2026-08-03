@@ -13,6 +13,7 @@ db_app_db_name: demo_app
 db_app_user: app_web
 db_health_check_table: health_check
 db_app_password: "{{ vault_db_app_password }}"
+monitoring_prometheus_source_ip: "192.168.100.1"  # IP de la passerelle NAT libvirt (point de scrape pour Prometheus)
 ansible_ssh_common_args: >-
   -o IdentitiesOnly=yes
   {% if inventory_hostname != 'bastion' %}

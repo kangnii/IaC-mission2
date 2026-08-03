@@ -1,0 +1,14 @@
+# Provisioning Grafana — Jour 9
+# Datasource Prometheus déclarée automatiquement au démarrage, pas de
+# configuration manuelle dans l'UI. Grafana et Prometheus tournent tous
+# les deux en network_mode: host (docker-compose.yml), donc Grafana
+# atteint Prometheus via localhost.
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://localhost:9090
+    isDefault: true
+    editable: false

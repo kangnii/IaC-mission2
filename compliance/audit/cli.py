@@ -9,6 +9,7 @@ from pathlib import Path
 
 import click
 
+from audit.exporter import DEFAULT_PUSHGATEWAY_ADDRESS, push_compliance_score
 from audit.parser import compute_score, parse_xccdf
 from audit.scanner import DEFAULT_PROFILE, HOST_IPS, run_remote_scan
 
@@ -41,7 +42,27 @@ def main() -> None:
     show_default=True,
     help="Profil XCCDF à évaluer.",
 )
-def scan(scan_all: bool, host: str | None, output_dir: Path, profile: str) -> None:
+@click.option(
+    "--pushgateway",
+    "pushgateway_address",
+    default=DEFAULT_PUSHGATEWAY_ADDRESS,
+    show_default=True,
+    help="Adresse du Pushgateway Prometheus.",
+)
+@click.option(
+    "--no-push",
+    "no_push",
+    is_flag=True,
+    help="Ne pas pousser le score vers le Pushgateway (calcul/affichage seuls).",
+)
+def scan(
+    scan_all: bool,
+    host: str | None,
+    output_dir: Path,
+    profile: str,
+    pushgateway_address: str,
+    no_push: bool,
+) -> None:
     """Lance un scan OpenSCAP et calcule le score de conformité."""
     if scan_all and host:
         raise click.UsageError("--all et --host sont mutuellement exclusifs.")
@@ -69,6 +90,14 @@ def scan(scan_all: bool, host: str | None, output_dir: Path, profile: str) -> No
             continue
 
         click.echo(f"[{target}] score de conformité : {score:.1f}% ({len(results)} règles)")
+
+        if no_push:
+            continue
+
+        try:
+            push_compliance_score(target, score, pushgateway_address)
+        except Exception as exc:  # noqa: BLE001 - la supervision ne doit pas faire échouer l'audit
+            click.echo(f"[{target}] échec de l'envoi au Pushgateway : {exc}", err=True)
 
     sys.exit(exit_code)
 

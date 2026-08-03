@@ -1,3 +1,29 @@
-# TODO jour 9 : scrape node_exporter (bastion/web/db) + pushgateway
+# Configuration Prometheus — Jour 9
+# Deux sources de métriques :
+#  - node_exporter sur bastion/web/db (installé par ansible/roles/monitoring,
+#    port 9100 filtré par nftables pour n'accepter que cet hôte, voir
+#    ansible/inventory/group_vars/all/vars.yml : monitoring_prometheus_source_ip)
+#  - le Pushgateway lui-même, qui expose compliance_score{host="..."}, poussé
+#    par compliance/audit/exporter.py après chaque `audit scan`
 global:
   scrape_interval: 15s
+
+scrape_configs:
+  - job_name: node_exporter
+    static_configs:
+      - targets:
+          - 192.168.100.10:9100   # bastion
+          - 192.168.100.20:9100   # web
+          - 192.168.100.30:9100   # db
+        labels:
+          project: iac-mission2
+
+  - job_name: pushgateway
+    # honor_labels : conserve les labels exposés par les métriques poussées
+    # (notamment "host", ajouté par le grouping_key de exporter.py) plutôt
+    # que de les faire écraser par le scrape ; pattern standard recommandé
+    # par Prometheus pour scraper un Pushgateway.
+    honor_labels: true
+    static_configs:
+      - targets:
+          - localhost:9091

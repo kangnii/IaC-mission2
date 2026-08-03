@@ -14,14 +14,20 @@ table inet filter {
 {% if 'role_bastion' in group_names %}
         # Bastion : seul point d'entrée SSH de l'infra
         tcp dport 22 accept
+        # Jour 9 : node_exporter, scrappé uniquement par Prometheus (hôte libvirt)
+        ip saddr {{ monitoring_prometheus_source_ip }} tcp dport 9100 accept
 {% elif 'role_web' in group_names %}
         # Web : SSH uniquement depuis le bastion, HTTP/HTTPS ouverts
         ip saddr {{ hostvars['bastion']['ansible_host'] }} tcp dport 22 accept
         tcp dport { 80, 443 } accept
+        # Jour 9 : node_exporter, scrappé uniquement par Prometheus (hôte libvirt)
+        ip saddr {{ monitoring_prometheus_source_ip }} tcp dport 9100 accept
 {% elif 'role_db' in group_names %}
         # DB : SSH uniquement depuis le bastion, Postgres uniquement depuis web
         ip saddr {{ hostvars['bastion']['ansible_host'] }} tcp dport 22 accept
         ip saddr {{ hostvars['web']['ansible_host'] }} tcp dport 5432 accept
+        # Jour 9 : node_exporter, scrappé uniquement par Prometheus (hôte libvirt)
+        ip saddr {{ monitoring_prometheus_source_ip }} tcp dport 9100 accept
 {% endif %}
     }
 

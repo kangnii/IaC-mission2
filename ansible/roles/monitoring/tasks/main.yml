@@ -1,3 +1,30 @@
 ---
-# Rôle monitoring
-# TODO : implémentation aux jours indiqués dans le planning.
+# Rôle monitoring — Jour 9
+# Installe et configure node_exporter sur bastion/web/db pour exposer les
+# métriques système à la stack Prometheus/Grafana (monitoring/docker-compose.yml),
+# qui tourne hors de l'infra, sur l'hôte libvirt (cf. terraform/network.tf,
+# la passerelle NAT sert de point de scrape, voir monitoring_prometheus_source_ip
+# dans group_vars/all/vars.yml et le rôle firewall).
+
+- name: Installer node_exporter
+  ansible.builtin.apt:
+    name: "{{ monitoring_node_exporter_package }}"
+    state: present
+    update_cache: true
+
+- name: Restreindre l'écoute de node_exporter à l'IP privée de la VM
+  ansible.builtin.lineinfile:
+    path: /etc/default/prometheus-node-exporter
+    regexp: '^ARGS='
+    line: 'ARGS="--web.listen-address={{ monitoring_node_exporter_listen_address }}"'
+    create: true
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Redémarrer node_exporter
+
+- name: Démarrer et activer node_exporter
+  ansible.builtin.service:
+    name: prometheus-node-exporter
+    state: started
+    enabled: true

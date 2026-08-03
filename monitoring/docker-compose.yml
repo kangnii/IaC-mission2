@@ -1,5 +1,53 @@
-# Stack de supervision - TODO jour 9
-# services : prometheus, pushgateway, grafana
-# Les volumes montent prometheus/prometheus.yml et grafana/dashboards/
+# Stack de supervision — Jour 9
+#
+# - prometheus  : scrape node_exporter (bastion/web/db) + pushgateway
+# - pushgateway : point d'entrée pour compliance/audit/exporter.py, qui
+#                 pousse compliance_score{host="..."} après chaque
+#                 `audit scan` (l'outil tourne à la demande, pas en continu,
+#                 donc pas de endpoint HTTP à scraper directement)
+# - grafana     : datasource Prometheus + auto-chargement du dossier
+#                 grafana/dashboards/ déjà provisionnés ; le contenu du
+#                 dashboard lui-même reste TODO jour 10
+#
+# network_mode: host sur les 3 services : Prometheus doit atteindre le
+# réseau privé libvirt 192.168.100.0/24 (terraform/network.tf), ce que
+# l'hôte fait déjà nativement (route via virbr1, cf. `ip route get`).
+# Grafana -> Prometheus et Prometheus -> Pushgateway passent alors tous
+# par localhost, sans configuration réseau Docker supplémentaire.
 version: "3.8"
-services: {}
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: iac-prometheus
+    network_mode: host
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    restart: unless-stopped
+
+  pushgateway:
+    image: prom/pushgateway:v1.11.0
+    container_name: iac-pushgateway
+    network_mode: host
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: iac-grafana
+    network_mode: host
+    environment:
+      # Identifiants par défaut pour un labo local, à ne jamais réutiliser
+      # tels quels sur une instance exposée publiquement.
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+volumes:
+  prometheus_data:
+  grafana_data:
