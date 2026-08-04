@@ -11,12 +11,12 @@ global:
 scrape_configs:
   - job_name: node_exporter
     static_configs:
-      - targets:
-          - 192.168.100.10:9100   # bastion
-          - 192.168.100.20:9100   # web
-          - 192.168.100.30:9100   # db
-        labels:
-          project: iac-mission2
+      - targets: ["192.168.100.10:9100"]
+        labels: {project: iac-mission2, host: bastion}
+      - targets: ["192.168.100.20:9100"]
+        labels: {project: iac-mission2, host: web}
+      - targets: ["192.168.100.30:9100"]
+        labels: {project: iac-mission2, host: db}
 
   - job_name: pushgateway
     # honor_labels : conserve les labels exposés par les métriques poussées

@@ -11,7 +11,7 @@ up:  ## Provisionne les VM (terraform apply)
 	cd terraform && terraform init && terraform apply -auto-approve
 
 configure:  ## Configure et durcit les VM (ansible)
-	cd ansible && ansible-playbook -i inventory/hosts.ini site.yml
+	cd ansible && ansible-playbook -i inventory/hosts.ini site.yml --ask-vault-pass
 
 audit:  ## Lance l'audit de conformité OpenSCAP
 	cd compliance && python -m audit.cli scan --all
