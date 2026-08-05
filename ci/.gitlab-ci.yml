@@ -17,7 +17,9 @@ variables:
 
 validate:terraform:
   stage: validate
-  image: hashicorp/terraform:1.9
+  image:
+    name: hashicorp/terraform:1.9 
+    entrypoint: [""]
   script:
     - cd terraform
     - terraform fmt -check -recursive
