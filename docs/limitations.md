@@ -75,3 +75,13 @@ le dépôt public).
   gardait l'ancienne configuration active (port 80 uniquement, port 443
   fermé) sans faire remonter d'erreur visible côté Ansible. Corrigé en
   utilisant la syntaxe compatible Nginx 1.22.
+
+## Jour 11 : rapport PDF + CI — décisions et limites assumées
+
+L'audit CI ne fait pas de vrai scan SSH. Le stage audit (et la gate qui en dépend) recalcule le score à partir des XML déjà commités dans compliance/reports/live/, via la nouvelle commande audit.cli score, plutôt que de relancer audit.cli scan. Raison : les VM (bastion/web/db) vivent sur le réseau privé libvirt local (192.168.100.0/24), injoignable depuis un runner GitLab.com partagé. Un vrai scan en CI supposerait un runner auto-hébergé avec accès à ce réseau, hors périmètre du jour 11. Conséquence assumée : la CI valide la cohérence du calcul de score et détecte une régression déclarée (XML mis à jour et commité), pas une dérive de conformité qui se produirait sans qu'un scan local soit rejoué et recommité.
+
+Seuil de gate fixé à 55 %. Choisi entre la baseline jour 4 (~44,6 %) et le score live actuel (~60 % sur les 3 hôtes) : assez haut pour casser le pipeline en cas de régression réelle, assez bas pour ne pas être fragile au moindre XCCDF légèrement différent d'un scan à l'autre.
+
+ansible-lint en profil min, pas basic/production. Le profil par défaut (basic) remonte ~80 signalements sur le code existant, presque tous du même type : var-naming[no-role-prefix] (convention de préfixe des variables de rôle, non respectée depuis le Jour 3) et quelques yaml (fins de fichier, espaces en fin de ligne). Ce sont des questions de style, pas des bugs fonctionnels ; les corriger en profondeur est hors périmètre du jour 11 (ça toucherait potentiellement tous les rôles écrits depuis le Jour 3). Le profil min passe proprement sur l'état actuel du code et reste une gate stricte (le job casse si un vrai problème structurel apparaît).
+
+Image hashicorp/terraform : entrypoint à écraser. L'image Docker officielle définit ENTRYPOINT ["/bin/terraform"] : sans entrypoint: [""] dans la config du job GitLab CI, chaque commande du script (censée passer par un shell) est interprétée comme un sous-commande Terraform, d'où l'erreur Terraform has no command named "sh". Comportement documenté par GitLab pour toute image dont l'entrypoint n'est pas un shell.

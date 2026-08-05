@@ -65,7 +65,7 @@ reproductible et redéployable sur une vraie infrastructure.
 - [x] Jour 8 : scanner.py + parser.py
 - [x] Jour 9 : stack de supervision
 - [x] Jour 10 : dashboard Grafana
-- [ ] Jour 11 : rapport PDF + CI
+- [x] Jour 11 : rapport PDF + CI
 - [ ] Jour 12 : répétition démo
 - [ ] Jour 13 : gel du code, README final
 - [ ] Jour 14 : marge
