@@ -1,8 +1,55 @@
-# Pipeline CI - TODO jour 11 (bonus)
+# Pipeline CI - Jour 11
 # stages : validate (terraform fmt/validate, ansible-lint)
-#          audit (lance l'outil de conformité)
-#          gate (échoue si score < seuil)
+#          audit (recalcule le score à partir des XML déjà commités,
+#                 sans scan SSH : le runner n'a pas accès au réseau
+#                 privé libvirt 192.168.100.0/24 où vivent les VM)
+#          gate (échoue si le score d'un hôte est sous le seuil)
 stages:
   - validate
   - audit
   - gate
+
+variables:
+  # Seuil de gate : au-dessus de la baseline jour 4 (~44.6%), en dessous
+  # du score live actuel (~60%) pour que le pipeline casse en cas de
+  # régression réelle plutôt que de toujours passer sans rien vérifier.
+  COMPLIANCE_FAIL_UNDER: "55"
+
+validate:terraform:
+  stage: validate
+  image: hashicorp/terraform:1.9
+  script:
+    - cd terraform
+    - terraform fmt -check -recursive
+    - terraform init -backend=false
+    - terraform validate
+
+validate:ansible-lint:
+  stage: validate
+  image: python:3.12-slim
+  before_script:
+    - pip install --break-system-packages ansible ansible-lint
+  script:
+    # Profil "min" : le code passe proprement dessus aujourd'hui. Les
+    # profils "basic"/"production" remontent ~80 signalements de style
+    # (var-naming notamment) hors périmètre du jour 11, voir
+    # docs/limitations.md.
+    - ansible-lint --profile min ansible/
+
+audit:score:
+  stage: audit
+  image: python:3.12-slim
+  before_script:
+    - pip install --break-system-packages -e compliance
+  script:
+    - cd compliance
+    - python -m audit.cli score --all
+
+gate:threshold:
+  stage: gate
+  image: python:3.12-slim
+  before_script:
+    - pip install --break-system-packages -e compliance
+  script:
+    - cd compliance
+    - python -m audit.cli score --all --fail-under "$COMPLIANCE_FAIL_UNDER"
